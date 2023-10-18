@@ -26,7 +26,7 @@ jobs:
     - name: Build docker images
       run: make docker-build
     - name: Run e2e connectivity test on a kind cluster
-      run: ./tests/k8s.sh
+      run: sleep 550 && ./tests/k8s.sh
       timeout-minutes: 10
     - name: Run e2e connectivity test on a kind cluster with go dataplane
       run: ./tests/k8s.sh go
