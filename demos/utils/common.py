@@ -31,12 +31,18 @@ def createFabric(dir):
 
 # createFabric creates peer certificates and yaml and deploys it to the cluster. 
 def createGw(name,dir):
+    createPeer(name,dir)
+    applyPeer(name,dir)
+
+def createPeer(name,dir):
     runcmdDir(f"{clAdm} create peer --name {name}",dir)
+    
+def applyPeer(name,dir):
     runcmd(f"kubectl apply -f {dir}/{name}/k8s.yaml")
     waitPod("cl-controlplane")
     waitPod("cl-dataplane")
     waitPod("gwctl")
- 
+    
 # startGwctl sets gwctl configuration
 def startGwctl(name,geIP, gwPort, testOutputFolder):
     runcmd(f'gwctl init --id {name} --gwIP {geIP} --gwPort {gwPort}  --dataplane mtls\

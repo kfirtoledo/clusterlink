@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright 2023 The ClusterLink Authors.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,30 +23,33 @@ sys.path.insert(0,f'{proj_dir}')
 sys.path.insert(1,f'{proj_dir}/demos/utils/cloud/')
 
 
-from demos.utils.mbgAux import runcmd, runcmdb, printHeader, waitPod, getPodName, getPodNameApp, getMbgPorts,getPodIp,clean_cluster,getPodNameIp
+from demos.utils.common import runcmd, createFabric, printHeader, startGwctl, createGw, createPeer, applyPeer
+from demos.utils.k8s import  getPodNameIp,waitPod
+from demos.utils.cloud import cluster
 
-from demos.utils.cloud.check_k8s_cluster_ready import checkClusterIsReady,connectToCluster
-from demos.utils.cloud.mbg_setup import mbgSetup,pushImage,mbgBuild
-from demos.utils.cloud.create_k8s_cluster import createCluster
-from demos.utils.cloud.clusterClass import cluster
-from demos.utils.cloud.delete_k8s_cluster import deleteClustersList, cleanClustersList
-from demos.utils.cloud.PROJECT_PARAMS import PROJECT_PATH
 import argparse
 
-mbg1gcp = cluster(name="mbg1", zone = "us-west1-b", platform = "gcp", type = "host") 
-mbg1ibm = cluster(name="mbg1", zone = "dal10",      platform = "ibm", type = "host")
-mbg2gcp = cluster(name="mbg2", zone = "us-west1-b", platform = "gcp", type = "target")
-mbg2ibm = cluster(name="mbg2", zone = "dal10",      platform = "ibm", type = "target")
+gw1gcp = cluster(name="peer1", zone = "us-west1-b", platform = "gcp", type = "host") 
+gw1ibm = cluster(name="peer1", zone = "dal10",      platform = "ibm", type = "host")
+gw2gcp = cluster(name="peer2", zone = "us-west1-b", platform = "gcp", type = "target")
+gw2ibm = cluster(name="peer2", zone = "dal10",      platform = "ibm", type = "target")
 
-destSvc  = "iperf3-server"
-srcSvc   = "iperf3-client"
-mbgcPort="443"
-folMn=f"{PROJECT_PATH}/demos/iperf3/testdata/manifests/"
+srcSvc           = "iperf3-client"
+destSvc          = "iperf3-server"
+destPort         = 5000
+iperf3DirectPort = "30001"
+
+# Folders
+folCl=f"{proj_dir}/demos/iperf3/testdata/manifests/iperf3-client"
+folSv=f"{proj_dir}/demos/iperf3/testdata/manifests/iperf3-server"
+testOutputFolder = f"{proj_dir}/bin/tests/iperf3"
+
+# Policy
+allowAllPolicy=f"{proj_dir}/pkg/policyengine/policytypes/examples/allowAll.json"
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Description of your program')
-    parser.add_argument('-d','--dataplane', help='choose which dataplane to use mtls/tcp', required=False, default="mtls")
     parser.add_argument('-c','--command', help='Script command: test/delete', required=False, default="test")
     parser.add_argument('-m','--machineType', help='Type of machine to create small/large', required=False, default="small")
     parser.add_argument('-cloud','--cloud', help='Cloud setup using gcp/ibm/diff (different clouds)', required=False, default="gcp")
@@ -53,79 +57,91 @@ if __name__ == "__main__":
 
     args = vars(parser.parse_args())
 
-    dataplane = args["dataplane"]
     command = args["command"]
     cloud = args["cloud"]
     dltCluster = args["deleteCluster"]
     machineType = args["machineType"]
-    mbg1crtFlags    = f"--certca ./mtls/ca.crt --cert ./mtls/mbg1.crt --key ./mtls/mbg1.key"  if dataplane =="mtls" else ""
-    mbg2crtFlags    = f"--certca ./mtls/ca.crt --cert ./mtls/mbg2.crt --key ./mtls/mbg2.key"  if dataplane =="mtls" else ""
-    mbg1 = mbg1gcp if cloud in ["gcp","diff"] else mbg1ibm
-    mbg2 = mbg2gcp if cloud in ["gcp"]        else mbg2ibm
-    gwctl1 ="gwctl1"
-    gwctl2 ="gwctl2"
+    gw1 = gw1gcp if cloud in ["gcp","diff"] else gw1ibm
+    gw2 = gw2gcp if cloud in ["gcp"]        else gw2ibm
+    gwctl1 = "gwctl1"
+    gwctl2 = "gwctl2"
+    gwPort = "443"
+    print(f'Working directory {proj_dir}')
+    os.chdir(proj_dir)
+    
+    ### build docker environment 
+    printHeader("Build docker image")
+    os.system("make build")
+    os.system("sudo make install")
     
     if command =="delete":
-        deleteClustersList([mbg1, mbg2])
+        gw1.deleteCluster(runBg=True)
+        gw2.deleteCluster()
+
         exit()
     elif command =="clean":
-        cleanClustersList([mbg1, mbg2])
+        gw1.cleanCluster()
+        gw2.cleanCluster()
         exit()
 
     #Create k8s cluster
-    createCluster(cluster=mbg1, run_in_bg=True , machineType = machineType)
-    createCluster(cluster=mbg2, run_in_bg=False, machineType = machineType)
-        
-    # #Setup MBG1
-    checkClusterIsReady(mbg1)
-    mbg1Ip=mbgBuild(mbgcPort=mbgcPort)
-    mbgSetup(mbg1, dataplane, mbg1crtFlags, gwctlName=gwctl1, mbgIp=mbg1Ip, mbgcPort=mbgcPort)
+    gw1.createCluster(run_in_bg=True , machineType = machineType)
+    gw2.createCluster(run_in_bg=False, machineType = machineType)
+    createFabric(testOutputFolder)
+    #Setup MBG1
+    gw1.checkClusterIsReady()
+    createPeer(gw1.name,testOutputFolder)
+    gw1.replace_source_image(f"{testOutputFolder}/{gw1.name}/k8s.yaml","quay.io/mcnet/")
+    applyPeer(gw1.name,testOutputFolder)
+    gw1.createLoadBalancer()
     
     #Build MBG2
-    checkClusterIsReady(mbg2)
-    mbg2Ip=mbgBuild(mbgcPort=mbgcPort)
-    mbgSetup(mbg2, dataplane, mbg2crtFlags, gwctlName=gwctl2, mbgIp=mbg2Ip, mbgcPort=mbgcPort)
+    gw2.checkClusterIsReady()
+    createPeer(gw2.name,testOutputFolder)
+    gw2.replace_source_image(f"{testOutputFolder}/{gw2.name}/k8s.yaml","quay.io/mcnet/")
+    applyPeer(gw2.name,testOutputFolder)
+    gw2.createLoadBalancer()
     
-
-    #Add MBG Peer
-    connectToCluster(mbg2)
-    gwctl2Pod =getPodName("gwctl")
-    printHeader("Add MBG1 MBG2")
-    runcmd(f'kubectl exec -i {gwctl2Pod} -- ./gwctl create peer --name {mbg1.name} --host {mbg1Ip} --port {mbgcPort}')
-
-            
-    # Send Hello
-    printHeader("Send Hello commands")
-    runcmd(f'kubectl exec -i {gwctl2Pod} -- ./gwctl hello')
-        
-    #Add services 
-    connectToCluster(mbg1)
-    gwctl1Pod =getPodName("gwctl")
-    runcmd(f"kubectl create -f {folMn}/iperf3-client/iperf3-client.yaml")
+    # Start gwctl
+    startGwctl(gw1.name, gw1.ip, gw1.port, testOutputFolder)
+    startGwctl(gw2.name, gw2.ip, gw2.port, testOutputFolder)
+    
+    # Create peers
+    printHeader("Create peers")
+    runcmd(f'gwctl create peer --myid {gw1.name} --name {gw2.name} --host {gw2.ip} --port {gwPort}')
+    runcmd(f'gwctl create peer --myid {gw2.name} --name {gw1.name} --host {gw1.ip} --port {gwPort}')
+    
+    # Set service iperf3-client in gw1
+    gw1.connectToCluster()
+    runcmd(f"kubectl create -f {folCl}/iperf3-client.yaml")
     waitPod(srcSvc)
-    podIperf3 =getPodIp(srcSvc)
-    runcmd(f'kubectl exec -i {gwctl1Pod} -- ./gwctl create export --name {srcSvc} --host {podIperf3} --description {srcSvc}')
-    
-    connectToCluster(mbg2)
-    runcmd(f"kubectl create -f {folMn}/iperf3-server/iperf3.yaml")
-    runcmd(f"kubectl create service nodeport iperf3-server --tcp=5000:5000 --node-port=30001")
+    runcmd(f'gwctl create export --myid {gw1.name} --name {srcSvc} --host {srcSvc} --port {destPort}')
+
+    # Set service iperf3-server in gw2
+    gw2.connectToCluster()
+    runcmd(f"kubectl create -f {folSv}/iperf3.yaml")
     waitPod(destSvc)
-    destSvcIp =getPodIp(destSvc)
-    runcmd(f'kubectl exec -i {gwctl2Pod} -- ./gwctl create export --name {destSvc} --host {destSvcIp}:5000 --description {destSvc}')
-    
-    #Expose destination service
-    printHeader("\n\nStart exposing connection")
-    runcmdb(f'kubectl exec -i {gwctl2Pod} -- ./gwctl expose --service {destSvc}')
+    runcmd(f'gwctl create export --myid {gw2.name} --name {destSvc} --host {destSvc} --port {destPort}')
+
+    #Import destination service
+    printHeader(f"\n\nStart Importing {destSvc} service to {gw1.name}")
+    runcmd(f'gwctl --myid {gw1.name} create import --name {destSvc} --host {destSvc} --port {destPort}')
+    printHeader(f"\n\nStart binding {destSvc} service to {gw1.name}")
+    runcmd(f'gwctl --myid {gw1.name} create binding --import {destSvc} --peer {gw2.name}')
+
+    #Add policy
+    printHeader("Applying policies")
+    runcmd(f'gwctl --myid {gw1.name} create policy --type access --policyFile {allowAllPolicy}')
+    runcmd(f'gwctl --myid {gw2.name} create policy --type access --policyFile {allowAllPolicy}')
 
     #Test MBG1
-    connectToCluster(mbg1)
-    podIperf3= getPodName(srcSvc)
-    mbgPod,mbgPodIP=getPodNameIp("mbg")
-    mbg1LocalPort, mbg1ExternalPort = getMbgPorts(mbgPod,destSvc)
+    gw1.connectToCluster()
+    podIperf3,_= getPodNameIp(srcSvc)
+
     for i in range(2):
         printHeader(f"iPerf3 test {i}")
-        cmd = f'kubectl exec -i {podIperf3} --  iperf3 -c {mbgPodIP} -p {mbg1LocalPort} -t 40'
+        cmd = f'kubectl exec -i {podIperf3} --  iperf3 -c iperf3-server -p {5000} -t 40'
         runcmd(cmd)
 
-    #clean target and source clusters
-    #delete_all_clusters()
+    ## clean target and source clusters
+    # delete_all_clusters()
