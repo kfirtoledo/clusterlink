@@ -27,19 +27,19 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Build and push cl-dataplane image 
-      run: |
-        docker build -t ghcr.io/clusterlink-net/cl-dataplane:${{ github.ref }} .
-        docker push ghcr.io/clusterlink-net/cl-dataplane:${{ github.ref }}
-    - name: Build and push cl-controlplane image
-      run: |
-        docker build -t ghcr.io/clusterlink-net/cl-controlplane:${{ github.ref }} .
-        docker push ghcr.io/clusterlink-net/cl-controlplane:${{ github.ref }}
-    - name: Build and push cl-cgo-dataplane image 
-      run: |
-        docker build -t ghcr.io/clusterlink-net/cl-go-dataplane:${{ github.ref }} .
-        docker push ghcr.io/clusterlink-net/cl-go-dataplane:${{ github.ref }}
+    # - name: Build and push cl-dataplane image 
+    #   run: |
+    #     docker build -t ghcr.io/clusterlink-net/cl-dataplane:${{ github.ref }} .
+    #     docker push ghcr.io/clusterlink-net/cl-dataplane:${{ github.ref }}
+    # - name: Build and push cl-controlplane image
+    #   run: |
+    #     docker build -t ghcr.io/clusterlink-net/cl-controlplane:${{ github.ref }} .
+    #     docker push ghcr.io/clusterlink-net/cl-controlplane:${{ github.ref }}
+    # - name: Build and push cl-cgo-dataplane image 
+    #   run: |
+    #     docker build -t ghcr.io/clusterlink-net/cl-go-dataplane:${{ github.ref }} .
+    #     docker push ghcr.io/clusterlink-net/cl-go-dataplane:${{ github.ref }}
     - name: Build and push gwctl image 
       run: |
-        docker build -t ghcr.io/clusterlink-net/gwctl:${{ github.ref }} .
-        docker push ghcr.io/clusterlink-net/gwctl:${{ github.ref }}
+        docker build -t ghcr.io/kfirtoledo/gwctl:${{ github.ref }} .
+        docker push ghcr.io/kfirtoledo/gwctl:${{ github.ref }}
