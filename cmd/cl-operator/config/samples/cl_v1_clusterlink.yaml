@@ -1,0 +1,15 @@
+apiVersion: cl.clusterlink.net/v1
+kind: Clusterlink
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterlink
+    app.kubernetes.io/instance: clusterlink-sample
+    app.kubernetes.io/part-of: cl-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cl-operator
+  name: clusterlink-sample
+spec:
+  dataplaneType: "envoy"
+  dataplaneReplicates: 1  
+  logLevel: "info"
+  image: temp     

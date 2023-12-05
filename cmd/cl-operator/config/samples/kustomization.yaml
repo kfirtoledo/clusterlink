@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- cl_v1_clusterlink.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples

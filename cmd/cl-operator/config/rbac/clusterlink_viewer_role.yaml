@@ -1,0 +1,27 @@
+# permissions for end users to view clusterlinks.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: clusterlink-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: cl-operator
+    app.kubernetes.io/part-of: cl-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: clusterlink-viewer-role
+rules:
+- apiGroups:
+  - cl.clusterlink.net
+  resources:
+  - clusterlinks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cl.clusterlink.net
+  resources:
+  - clusterlinks/status
+  verbs:
+  - get
