@@ -43,11 +43,6 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-const (
-	// CAFile is the path to the certificate authority file.
-	CAFile = "/etc/ssl/certs/clink_ca.pem"
-)
-
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
@@ -95,16 +90,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	ca, err := os.ReadFile(CAFile)
-	if err != nil {
-		setupLog.Error(err, "unable to read CA file"+CAFile)
-		os.Exit(1)
-	}
 	if err = (&controller.ClusterlinkReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		CaFabric: ca,
-		Logger:   logrus.WithField("component", "reconciler"),
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Logger: logrus.WithField("component", "reconciler"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Clusterlink")
 		os.Exit(1)

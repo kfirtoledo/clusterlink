@@ -36,7 +36,6 @@ import (
 	cpapp "github.com/clusterlink-net/clusterlink/cmd/cl-controlplane/app"
 	dpapp "github.com/clusterlink-net/clusterlink/cmd/cl-dataplane/app"
 	clv1 "github.com/clusterlink-net/clusterlink/cmd/cl-operator/api/v1"
-	"github.com/clusterlink-net/clusterlink/pkg/bootstrap"
 	cpapi "github.com/clusterlink-net/clusterlink/pkg/controlplane/api"
 	dpapi "github.com/clusterlink-net/clusterlink/pkg/dataplane/api"
 
@@ -57,9 +56,13 @@ type ClusterlinkReconciler struct {
 	CaFabric []byte
 }
 
-//+kubebuilder:rbac:groups=cl.clusterlink.net,resources=clusterlinks,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=cl.clusterlink.net,resources=clusterlinks/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=cl.clusterlink.net,resources=clusterlinks/finalizers,verbs=update
+// +kubebuilder:rbac:groups=cl.clusterlink.net,resources=clusterlinks,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=cl.clusterlink.net,resources=clusterlinks/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=cl.clusterlink.net,resources=clusterlinks/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=list;get;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=services;pods;endpoints,verbs=list;get;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="apps",resources=deployments,verbs=list;get;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles;clusterrolebindings,verbs=list;get;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -71,8 +74,6 @@ type ClusterlinkReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *ClusterlinkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := ctrl.Log.WithValues("clusterlink", req.NamespacedName)
-
 	// Fetch the Clusterlink instance
 	instance := &clv1.Clusterlink{}
 	err := r.Get(ctx, req.NamespacedName, instance)
@@ -92,8 +93,8 @@ func (r *ClusterlinkReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// }
 
 	// CRD details
-	log.Info("Reconciling Clusterlink", "Namespace", instance.Namespace, "Name", instance.Name)
-	log.Info("ClusterlinkSpec",
+	r.Logger.Info("Reconciling Clusterlink", "Namespace", instance.Namespace, "Name", instance.Name)
+	r.Logger.Info("ClusterlinkSpec",
 		"DataplaneType", instance.Spec.DataplaneType,
 		"DataplaneReplicates", instance.Spec.DataplaneReplicates,
 		"LogFile", instance.Spec.LogFile,
@@ -118,60 +119,62 @@ func (r *ClusterlinkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 func (r *ClusterlinkReconciler) createClusterlink(ctx context.Context) error {
-	//Create certificates
-	caFabric, err := bootstrap.CertificateFromRaw(r.CaFabric, r.CaFabric)
-	if err != nil {
-		return err
-	}
-	caFabricData := map[string][]byte{
-		"ca": r.CaFabric,
-	}
+	// //Create certificates
+	// caFabric, err := bootstrap.CertificateFromRaw(r.CaFabric, r.CaFabric)
+	// if err != nil {
+	// 	return err
+	// }
+	// caFabricData := map[string][]byte{
+	// 	"ca": r.CaFabric,
+	// }
 
-	caPeer, err := bootstrap.CreatePeerCertificate(r.clCR.Name, caFabric)
-	if err != nil {
-		return err
-	}
+	// caPeer, err := bootstrap.CreatePeerCertificate(r.clCR.Name, caFabric)
+	// if err != nil {
+	// 	return err
+	// }
 
-	caPeerData := map[string][]byte{
-		"ca": caPeer.RawCert(),
-	}
+	// caPeerData := map[string][]byte{
+	// 	"ca": caPeer.RawCert(),
+	// }
 
-	certCP, err := bootstrap.CreateControlplaneCertificate(r.clCR.Name, caPeer)
-	if err != nil {
-		return err
-	}
+	// certCP, err := bootstrap.CreateControlplaneCertificate(r.clCR.Name, caPeer)
+	// if err != nil {
+	// 	return err
+	// }
 
-	certCPData := map[string][]byte{
-		"cert": certCP.RawCert(),
-		"key":  certCP.RawKey(),
-	}
+	// certCPData := map[string][]byte{
+	// 	"cert": certCP.RawCert(),
+	// 	"key":  certCP.RawKey(),
+	// }
 
-	certDP, err := bootstrap.CreateControlplaneCertificate(r.clCR.Name, caPeer)
-	if err != nil {
-		return err
-	}
+	// certDP, err := bootstrap.CreateControlplaneCertificate(r.clCR.Name, caPeer)
+	// if err != nil {
+	// 	return err
+	// }
 
-	certDPData := map[string][]byte{
-		"cert": certDP.RawCert(),
-		"key":  certDP.RawKey(),
-	}
+	// certDPData := map[string][]byte{
+	// 	"cert": certDP.RawCert(),
+	// 	"key":  certDP.RawKey(),
+	// }
 
-	certGwctl, err := bootstrap.CreateGWCTLCertificate(caPeer)
-	if err != nil {
-		return err
-	}
+	// certGwctl, err := bootstrap.CreateGWCTLCertificate(caPeer)
+	// if err != nil {
+	// 	return err
+	// }
 
-	certGwctlData := map[string][]byte{
-		"cert": certGwctl.RawCert(),
-		"key":  certGwctl.RawKey(),
-	}
+	// certGwctlData := map[string][]byte{
+	// 	"cert": certGwctl.RawCert(),
+	// 	"key":  certGwctl.RawKey(),
+	// }
 
-	// Create secrets
-	r.createSecret(ctx, "cl-fabric", caFabricData)
-	r.createSecret(ctx, "cl-peer", caPeerData)
-	r.createSecret(ctx, ControlPlaneName, certCPData)
-	r.createSecret(ctx, DataPlaneName, certDPData)
-	r.createSecret(ctx, "gwctl", certGwctlData)
+	// // Create secrets
+	// r.createSecret(ctx, "cl-fabric", caFabricData)
+	// r.createSecret(ctx, "cl-peer", caPeerData)
+	// r.createSecret(ctx, ControlPlaneName, certCPData)
+	// r.createSecret(ctx, DataPlaneName, certDPData)
+	// r.createSecret(ctx, "gwctl", certGwctlData)
+
+	r.Logger.Info("Start create clusterlink Deployments")
 	// Create PVC
 	r.createPVC(ctx, ControlPlaneName)
 
@@ -232,9 +235,10 @@ func (r *ClusterlinkReconciler) createControlplane(ctx context.Context) error {
 					},
 					Containers: []corev1.Container{
 						{
-							Name:  ControlPlaneName,
-							Image: r.clCR.Spec.Image + ControlPlaneName,
-							Args:  []string{"--log-level", r.clCR.Spec.LogLevel, "--platform", "k8s"},
+							Name:            ControlPlaneName,
+							Image:           r.clCR.Spec.Image + ControlPlaneName,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Args:            []string{"--log-level", r.clCR.Spec.LogLevel, "--platform", "k8s"},
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: cpapi.ListenPort,
@@ -436,7 +440,8 @@ func (r *ClusterlinkReconciler) createRules(ctx context.Context, name string) er
 	// Create or update the ClusterRole for cl-controlplane
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: r.clCR.Namespace,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -458,7 +463,8 @@ func (r *ClusterlinkReconciler) createRules(ctx context.Context, name string) er
 	// Create or update the ClusterRoleBinding for cl-controlplane
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: r.clCR.Namespace,
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
@@ -477,8 +483,10 @@ func (r *ClusterlinkReconciler) createRules(ctx context.Context, name string) er
 
 }
 func (r *ClusterlinkReconciler) createResource(ctx context.Context, object client.Object) error {
+	r.Logger.Infof("Create resource %s %s", object.GetObjectKind(), object.GetName())
 	// Set the owner reference to link the secret to the Custom Resource
 	if err := ctrl.SetControllerReference(r.clCR, object, r.Scheme); err != nil {
+		r.Logger.Error(err)
 		return err
 	}
 
@@ -487,6 +495,9 @@ func (r *ClusterlinkReconciler) createResource(ctx context.Context, object clien
 		// Set any fields you want to modify before the update
 		return nil
 	})
+	if err != nil {
+		r.Logger.Error(err)
+	}
 	return err
 }
 

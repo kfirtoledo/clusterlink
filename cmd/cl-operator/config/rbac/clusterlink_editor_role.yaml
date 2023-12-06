@@ -29,3 +29,9 @@ rules:
   - clusterlinks/status
   verbs:
   - get
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["list"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["list"]

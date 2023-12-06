@@ -12,4 +12,3 @@ spec:
   dataplaneType: "envoy"
   dataplaneReplicates: 1  
   logLevel: "info"
-  image: temp     
