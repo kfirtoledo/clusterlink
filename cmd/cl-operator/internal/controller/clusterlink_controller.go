@@ -53,8 +53,8 @@ type ClusterlinkReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
 	clCR     *clv1.Clusterlink
-	logger   *logrus.Entry
-	caFabric []byte
+	Logger   *logrus.Entry
+	CaFabric []byte
 }
 
 //+kubebuilder:rbac:groups=cl.clusterlink.net,resources=clusterlinks,verbs=get;list;watch;create;update;patch;delete
@@ -104,7 +104,7 @@ func (r *ClusterlinkReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		r.clCR = instance
 		r.createClusterlink(ctx)
 	} else if !reflect.DeepEqual(instance.Spec, r.clCR.Spec) {
-		r.clCR = instance.Spec
+		r.clCR = instance
 		r.updateClusterlink(ctx)
 
 	}
@@ -119,12 +119,12 @@ func (r *ClusterlinkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 func (r *ClusterlinkReconciler) createClusterlink(ctx context.Context) error {
 	//Create certificates
-	caFabric, err := bootstrap.CertificateFromRaw(r.caFabric, r.caFabric)
+	caFabric, err := bootstrap.CertificateFromRaw(r.CaFabric, r.CaFabric)
 	if err != nil {
 		return err
 	}
 	caFabricData := map[string][]byte{
-		"ca": r.caFabric,
+		"ca": r.CaFabric,
 	}
 
 	caPeer, err := bootstrap.CreatePeerCertificate(r.clCR.Name, caFabric)
@@ -185,6 +185,7 @@ func (r *ClusterlinkReconciler) createClusterlink(ctx context.Context) error {
 
 	// Create rules
 	r.createRules(ctx, ControlPlaneName)
+	return nil
 }
 
 func (r *ClusterlinkReconciler) createControlplane(ctx context.Context) error {
@@ -232,8 +233,8 @@ func (r *ClusterlinkReconciler) createControlplane(ctx context.Context) error {
 					Containers: []corev1.Container{
 						{
 							Name:  ControlPlaneName,
-							Image: r.clCR.Spec.image + ControlPlaneName,
-							Args:  []string{"--log-level", r.clCR.LogLevel, "--platform", "k8s"},
+							Image: r.clCR.Spec.Image + ControlPlaneName,
+							Args:  []string{"--log-level", r.clCR.Spec.LogLevel, "--platform", "k8s"},
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: cpapi.ListenPort,
@@ -289,7 +290,7 @@ func (r *ClusterlinkReconciler) createDataplane(ctx context.Context) error {
 			Namespace: r.clCR.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(r.clCR.Spec.DataplaneReplicates),
+			Replicas: int32Ptr(int32(r.clCR.Spec.DataplaneReplicates)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{"app": DataPlaneName},
 			},
@@ -319,7 +320,7 @@ func (r *ClusterlinkReconciler) createDataplane(ctx context.Context) error {
 					Containers: []corev1.Container{
 						{
 							Name:  "dataplane",
-							Image: r.clCR.Spec.image + DataPlaneName,
+							Image: r.clCR.Spec.Image + DataPlaneName,
 							Args: []string{
 								"--log-level", r.clCR.Spec.LogLevel,
 								"--controlplane-host", ControlPlaneName,
@@ -361,7 +362,7 @@ func (r *ClusterlinkReconciler) createDataplane(ctx context.Context) error {
 
 func (r *ClusterlinkReconciler) createService(ctx context.Context, name string, port uint16) error {
 	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.clCR.namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.clCR.Namespace},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
@@ -385,9 +386,9 @@ func (r *ClusterlinkReconciler) createService(ctx context.Context, name string, 
 		if err := r.Create(ctx, service); err != nil {
 			return err
 		}
-		r.logger.Info("service created", "Name", service.Name, "Namespace", service.Namespace)
+		r.Logger.Info("service created", "Name", service.Name, "Namespace", service.Namespace)
 	} else if err == nil {
-		r.logger.Info("service already exist", "Name", existingService.Name, "Namespace", existingService.Namespace)
+		r.Logger.Info("service already exist", "Name", existingService.Name, "Namespace", existingService.Namespace)
 	} else {
 		return err
 	}

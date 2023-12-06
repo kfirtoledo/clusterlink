@@ -103,8 +103,8 @@ func main() {
 	if err = (&controller.ClusterlinkReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
-		caFabric: ca,
-		logger:   logrus.WithField("component", "reconciler"),
+		CaFabric: ca,
+		Logger:   logrus.WithField("component", "reconciler"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Clusterlink")
 		os.Exit(1)
