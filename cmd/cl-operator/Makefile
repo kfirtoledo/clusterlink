@@ -137,6 +137,10 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
 
+mydeploy: kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
+
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
@@ -185,7 +189,7 @@ kind-test1: docker-build
 	kind load docker-image cl-controlplane:latest --name=peer1
 	kind load docker-image cl-dataplane:latest --name=peer1
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/cl-secret.yaml
-	$(MAKE) deploy
+	$(MAKE) mydeploy
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/clusterlink.yaml
 
 kind-test2: docker-build
@@ -195,5 +199,5 @@ kind-test2: docker-build
 	kind load docker-image cl-controlplane:latest --name=peer2
 	kind load docker-image cl-dataplane:latest --name=peer2
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer2/cl-secret.yaml
-	$(MAKE) deploy
+	$(MAKE) mydeploy
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer2/clusterlink.yaml

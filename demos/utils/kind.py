@@ -48,11 +48,11 @@ class cluster:
     # startCluster deploy a Clusterlink gateway.
     def startCluster(self, testOutputFolder, logLevel="info", dataplane="envoy"):
         self.useCluster()
-        runcmd(f"kind load docker-image cl-controlplane --name={self.name}")
-        runcmd(f"kind load docker-image cl-dataplane    --name={self.name}")
-        runcmd(f"kind load docker-image cl-go-dataplane --name={self.name}")
-        runcmd(f"kind load docker-image gwctl --name={self.name}")
-        createGw(self.name, testOutputFolder, logLevel, dataplane, localImage=True)
+        # runcmd(f"kind load docker-image cl-controlplane --name={self.name}")
+        # runcmd(f"kind load docker-image cl-dataplane    --name={self.name}")
+        # runcmd(f"kind load docker-image cl-go-dataplane --name={self.name}")
+        # runcmd(f"kind load docker-image gwctl --name={self.name}")
+        # createGw(self.name, testOutputFolder, logLevel, dataplane, localImage=True)
         self.setKindIp()
         runcmd("kubectl delete service cl-dataplane")
         runcmd("kubectl create service nodeport cl-dataplane --tcp=443:443 --node-port=30443")

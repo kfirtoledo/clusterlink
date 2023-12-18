@@ -85,16 +85,20 @@ func (r *ClusterlinkReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// CRD details
-	r.Logger.Info("Reconciling Clusterlink", "Namespace", instance.Namespace, "Name", instance.Name)
-	r.Logger.Info("ClusterlinkSpec",
-		"DataPlane.Type", instance.Spec.DataPlane.Type,
-		"DataPlane.Replicates", instance.Spec.DataPlane.Replicates,
-		"LogLevel", instance.Spec.LogLevel,
-		"ContainerRegistry", instance.Spec.ContainerRegistry,
-		"ImageTag", instance.Spec.ImageTag,
+	r.Logger.Info("Reconciling Clusterlink", "Namespace ", instance.Namespace, "Name ", instance.Name)
+	r.Logger.Info("ClusterlinkSpec:\n",
+		" DataPlane.Type ", instance.Spec.DataPlane.Type,
+		" DataPlane.Replicates ", instance.Spec.DataPlane.Replicates,
+		" LogLevel ", instance.Spec.LogLevel,
+		" ContainerRegistry ", instance.Spec.ContainerRegistry,
+		" ImageTag ", instance.Spec.ImageTag,
 	)
 	r.clCR = instance
-	if err := r.createClusterlink(ctx); err != nil {
+	if r.clCR.Spec.ContainerRegistry != "" {
+		r.clCR.Spec.ContainerRegistry += "/"
+	}
+
+	if err := r.setClusterlink(ctx); err != nil {
 		return ctrl.Result{}, nil
 	}
 
@@ -107,26 +111,26 @@ func (r *ClusterlinkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&clv1.Clusterlink{}).
 		Complete(r)
 }
-func (r *ClusterlinkReconciler) createClusterlink(ctx context.Context) error {
+func (r *ClusterlinkReconciler) setClusterlink(ctx context.Context) error {
 
 	r.Logger.Info("Start create clusterlink Deployments")
-	// Create PVC
-	r.createPVC(ctx, ControlPlaneName)
+	// Set PVC
+	r.setPVC(ctx, ControlPlaneName)
 
-	// Create services
-	r.createService(ctx, ControlPlaneName, cpapi.ListenPort)
-	r.createService(ctx, DataPlaneName, dpapi.ListenPort)
+	// Set services
+	r.setService(ctx, ControlPlaneName, cpapi.ListenPort)
+	r.setService(ctx, DataPlaneName, dpapi.ListenPort)
 
-	// Create deployments
-	r.createControlplane(ctx)
-	r.createDataplane(ctx)
+	// Set deployments
+	r.setControlplane(ctx)
+	r.setDataplane(ctx)
 
-	// Create rules
-	r.createRules(ctx, ControlPlaneName)
+	// Set rules
+	r.setRules(ctx, ControlPlaneName)
 	return nil
 }
 
-func (r *ClusterlinkReconciler) createControlplane(ctx context.Context) error {
+func (r *ClusterlinkReconciler) setControlplane(ctx context.Context) error {
 	controlplaneDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ControlPlaneName,
@@ -219,10 +223,10 @@ func (r *ClusterlinkReconciler) createControlplane(ctx context.Context) error {
 			},
 		},
 	}
-	return r.createResource(ctx, controlplaneDeployment)
+	return r.setResource(ctx, controlplaneDeployment)
 }
 
-func (r *ClusterlinkReconciler) createDataplane(ctx context.Context) error {
+func (r *ClusterlinkReconciler) setDataplane(ctx context.Context) error {
 	dataplaneDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DataPlaneName,
@@ -296,10 +300,10 @@ func (r *ClusterlinkReconciler) createDataplane(ctx context.Context) error {
 			},
 		},
 	}
-	return r.createResource(ctx, dataplaneDeployment)
+	return r.setResource(ctx, dataplaneDeployment)
 }
 
-func (r *ClusterlinkReconciler) createService(ctx context.Context, name string, port uint16) error {
+func (r *ClusterlinkReconciler) setService(ctx context.Context, name string, port uint16) error {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: r.clCR.Namespace},
 		Spec: corev1.ServiceSpec{
@@ -334,21 +338,7 @@ func (r *ClusterlinkReconciler) createService(ctx context.Context, name string, 
 	return nil
 }
 
-func (r *ClusterlinkReconciler) createSecret(ctx context.Context, name string, secretData map[string][]byte) error {
-	// Create a new Secret object
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: r.clCR.Namespace,
-		},
-		Data: secretData,
-	}
-
-	return r.createResource(ctx, secret)
-
-}
-
-func (r *ClusterlinkReconciler) createPVC(ctx context.Context, name string) error {
+func (r *ClusterlinkReconciler) setPVC(ctx context.Context, name string) error {
 	// Create the PVC for cl-controlplane
 	controlplanePVC := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -364,10 +354,10 @@ func (r *ClusterlinkReconciler) createPVC(ctx context.Context, name string) erro
 			},
 		},
 	}
-	return r.createResource(ctx, controlplanePVC)
+	return r.setResource(ctx, controlplanePVC)
 
 }
-func (r *ClusterlinkReconciler) createRules(ctx context.Context, name string) error {
+func (r *ClusterlinkReconciler) setRules(ctx context.Context, name string) error {
 	// Create or update the ClusterRole for cl-controlplane
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
@@ -387,7 +377,7 @@ func (r *ClusterlinkReconciler) createRules(ctx context.Context, name string) er
 			},
 		},
 	}
-	err := r.createResource(ctx, clusterRole)
+	err := r.setResource(ctx, clusterRole)
 	if err != nil {
 		return err
 	}
@@ -410,10 +400,10 @@ func (r *ClusterlinkReconciler) createRules(ctx context.Context, name string) er
 			},
 		},
 	}
-	return r.createResource(ctx, clusterRoleBinding)
+	return r.setResource(ctx, clusterRoleBinding)
 
 }
-func (r *ClusterlinkReconciler) createResource(ctx context.Context, object client.Object) error {
+func (r *ClusterlinkReconciler) setResource(ctx context.Context, object client.Object) error {
 	r.Logger.Infof("Create resource %s %s", object.GetObjectKind(), object.GetName())
 	// Set the owner reference to link the secret to the Custom Resource
 	if err := ctrl.SetControllerReference(r.clCR, object, r.Scheme); err != nil {
