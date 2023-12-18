@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	k8sTemplate = `---
+	certTemplate = `---
 apiVersion: v1
 kind: Secret
 metadata:
@@ -65,7 +65,9 @@ metadata:
 data:
   cert: {{.gwctlCert}}
   key: {{.gwctlKey}}
----
+`
+
+	k8sTemplate = `---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -265,6 +267,22 @@ subjects:
 - kind: ServiceAccount
   name: default
   namespace: default`
+	clusterLinkTemplate = `apiVersion: cl.clusterlink.net/v1
+kind: Clusterlink
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterlink
+    app.kubernetes.io/instance: clusterlink
+    app.kubernetes.io/part-of: cl-operator
+    app.kubernetes.io/created-by: cl-operator
+  name: clusterlink
+spec:
+  dataplane:
+    type: {{.dataplaneType}}
+    replicates: {{.dataplanes}} 
+  logLevel: {{.logLevel}} 
+  containerRegistry: {{.containerRegistry}} 
+`
 )
 
 // K8SConfig returns a kubernetes deployment file.
@@ -282,15 +300,6 @@ func K8SConfig(config *Config) ([]byte, error) {
 		"containerRegistry": containerRegistry,
 
 		"dataplaneTypeEnvoy": DataplaneTypeEnvoy,
-
-		"fabricCA":         base64.StdEncoding.EncodeToString(config.FabricCertificate.RawCert()),
-		"peerCA":           base64.StdEncoding.EncodeToString(config.PeerCertificate.RawCert()),
-		"controlplaneCert": base64.StdEncoding.EncodeToString(config.ControlplaneCertificate.RawCert()),
-		"controlplaneKey":  base64.StdEncoding.EncodeToString(config.ControlplaneCertificate.RawKey()),
-		"dataplaneCert":    base64.StdEncoding.EncodeToString(config.DataplaneCertificate.RawCert()),
-		"dataplaneKey":     base64.StdEncoding.EncodeToString(config.DataplaneCertificate.RawKey()),
-		"gwctlCert":        base64.StdEncoding.EncodeToString(config.GWCTLCertificate.RawCert()),
-		"gwctlKey":         base64.StdEncoding.EncodeToString(config.GWCTLCertificate.RawKey()),
 
 		"persistencyDirectoryMountPath": filepath.Dir(cpapp.StoreFile),
 
@@ -312,5 +321,56 @@ func K8SConfig(config *Config) ([]byte, error) {
 		return nil, fmt.Errorf("cannot create k8s configuration off template: %w", err)
 	}
 
-	return k8sConfig.Bytes(), nil
+	certConfig, err := K8SCertificateConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	k8sBytes := append(certConfig, k8sConfig.Bytes()...)
+
+	return k8sBytes, nil
+}
+
+// K8SCertificateConfig returns a kubernetes certificate file.
+func K8SCertificateConfig(config *Config) ([]byte, error) {
+	args := map[string]interface{}{
+		"fabricCA":         base64.StdEncoding.EncodeToString(config.FabricCertificate.RawCert()),
+		"peerCA":           base64.StdEncoding.EncodeToString(config.PeerCertificate.RawCert()),
+		"controlplaneCert": base64.StdEncoding.EncodeToString(config.ControlplaneCertificate.RawCert()),
+		"controlplaneKey":  base64.StdEncoding.EncodeToString(config.ControlplaneCertificate.RawKey()),
+		"dataplaneCert":    base64.StdEncoding.EncodeToString(config.DataplaneCertificate.RawCert()),
+		"dataplaneKey":     base64.StdEncoding.EncodeToString(config.DataplaneCertificate.RawKey()),
+		"gwctlCert":        base64.StdEncoding.EncodeToString(config.GWCTLCertificate.RawCert()),
+		"gwctlKey":         base64.StdEncoding.EncodeToString(config.GWCTLCertificate.RawKey()),
+	}
+
+	var certConfig bytes.Buffer
+	t := template.Must(template.New("").Parse(certTemplate))
+	if err := t.Execute(&certConfig, args); err != nil {
+		return nil, fmt.Errorf("cannot create k8s certificate configuration off template: %w", err)
+	}
+
+	return certConfig.Bytes(), nil
+}
+
+// K8SClusterLinkConfig returns a clusterlink YAML file.
+func K8SClusterLinkConfig(config *Config) ([]byte, error) {
+	containerRegistry := config.ContainerRegistry
+	if containerRegistry != "" {
+		containerRegistry = config.ContainerRegistry + "/"
+	}
+
+	args := map[string]interface{}{
+		"dataplanes":        config.Dataplanes,
+		"dataplaneType":     config.DataplaneType,
+		"logLevel":          config.LogLevel,
+		"containerRegistry": containerRegistry,
+	}
+
+	var clConfig bytes.Buffer
+	t := template.Must(template.New("").Parse(clusterLinkTemplate))
+	if err := t.Execute(&clConfig, args); err != nil {
+		return nil, fmt.Errorf("cannot create k8s clusterlink configuration off template: %w", err)
+	}
+
+	return clConfig.Bytes(), nil
 }
