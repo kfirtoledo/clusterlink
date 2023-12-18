@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/created-by: cl-operator
   name: clusterlink-sample
 spec:
-  dataplaneType: "envoy"
-  dataplaneReplicates: 1  
+  dataplane:
+    - Type: "envoy"
+      Replicates: 1  
   logLevel: "info"

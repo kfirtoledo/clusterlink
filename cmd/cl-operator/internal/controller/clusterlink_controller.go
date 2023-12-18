@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"path/filepath"
-	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -85,30 +84,20 @@ func (r *ClusterlinkReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	// if instance.DeletionTimestamp != nil {
-	// 	// CR is being deleted, perform cleanup operations
-	// 	r.deleteCLdeployment(ctx)
-	// 	// Return to indicate that the CR has been processed
-	// 	return ctrl.Result{}, nil
-	// }
-
 	// CRD details
 	r.Logger.Info("Reconciling Clusterlink", "Namespace", instance.Namespace, "Name", instance.Name)
 	r.Logger.Info("ClusterlinkSpec",
-		"DataplaneType", instance.Spec.DataplaneType,
-		"DataplaneReplicates", instance.Spec.DataplaneReplicates,
-		"LogFile", instance.Spec.LogFile,
+		"DataPlane.Type", instance.Spec.DataPlane.Type,
+		"DataPlane.Replicates", instance.Spec.DataPlane.Replicates,
 		"LogLevel", instance.Spec.LogLevel,
-		"Image", instance.Spec.Image,
+		"ContainerRegistry", instance.Spec.ContainerRegistry,
+		"ImageTag", instance.Spec.ImageTag,
 	)
-	if r.clCR == nil {
-		r.clCR = instance
-		r.createClusterlink(ctx)
-	} else if !reflect.DeepEqual(instance.Spec, r.clCR.Spec) {
-		r.clCR = instance
-		r.updateClusterlink(ctx)
-
+	r.clCR = instance
+	if err := r.createClusterlink(ctx); err != nil {
+		return ctrl.Result{}, nil
 	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -119,60 +108,6 @@ func (r *ClusterlinkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 func (r *ClusterlinkReconciler) createClusterlink(ctx context.Context) error {
-	// //Create certificates
-	// caFabric, err := bootstrap.CertificateFromRaw(r.CaFabric, r.CaFabric)
-	// if err != nil {
-	// 	return err
-	// }
-	// caFabricData := map[string][]byte{
-	// 	"ca": r.CaFabric,
-	// }
-
-	// caPeer, err := bootstrap.CreatePeerCertificate(r.clCR.Name, caFabric)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// caPeerData := map[string][]byte{
-	// 	"ca": caPeer.RawCert(),
-	// }
-
-	// certCP, err := bootstrap.CreateControlplaneCertificate(r.clCR.Name, caPeer)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// certCPData := map[string][]byte{
-	// 	"cert": certCP.RawCert(),
-	// 	"key":  certCP.RawKey(),
-	// }
-
-	// certDP, err := bootstrap.CreateControlplaneCertificate(r.clCR.Name, caPeer)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// certDPData := map[string][]byte{
-	// 	"cert": certDP.RawCert(),
-	// 	"key":  certDP.RawKey(),
-	// }
-
-	// certGwctl, err := bootstrap.CreateGWCTLCertificate(caPeer)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// certGwctlData := map[string][]byte{
-	// 	"cert": certGwctl.RawCert(),
-	// 	"key":  certGwctl.RawKey(),
-	// }
-
-	// // Create secrets
-	// r.createSecret(ctx, "cl-fabric", caFabricData)
-	// r.createSecret(ctx, "cl-peer", caPeerData)
-	// r.createSecret(ctx, ControlPlaneName, certCPData)
-	// r.createSecret(ctx, DataPlaneName, certDPData)
-	// r.createSecret(ctx, "gwctl", certGwctlData)
 
 	r.Logger.Info("Start create clusterlink Deployments")
 	// Create PVC
@@ -236,7 +171,7 @@ func (r *ClusterlinkReconciler) createControlplane(ctx context.Context) error {
 					Containers: []corev1.Container{
 						{
 							Name:            ControlPlaneName,
-							Image:           r.clCR.Spec.Image + ControlPlaneName,
+							Image:           r.clCR.Spec.ContainerRegistry + ControlPlaneName + ":" + r.clCR.Spec.ImageTag,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args:            []string{"--log-level", r.clCR.Spec.LogLevel, "--platform", "k8s"},
 							Ports: []corev1.ContainerPort{
@@ -294,7 +229,7 @@ func (r *ClusterlinkReconciler) createDataplane(ctx context.Context) error {
 			Namespace: r.clCR.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(int32(r.clCR.Spec.DataplaneReplicates)),
+			Replicas: int32Ptr(int32(r.clCR.Spec.DataPlane.Replicates)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{"app": DataPlaneName},
 			},
@@ -324,7 +259,7 @@ func (r *ClusterlinkReconciler) createDataplane(ctx context.Context) error {
 					Containers: []corev1.Container{
 						{
 							Name:  "dataplane",
-							Image: r.clCR.Spec.Image + DataPlaneName,
+							Image: r.clCR.Spec.ContainerRegistry + DataPlaneName + ":" + r.clCR.Spec.ImageTag,
 							Args: []string{
 								"--log-level", r.clCR.Spec.LogLevel,
 								"--controlplane-host", ControlPlaneName,
@@ -411,10 +346,6 @@ func (r *ClusterlinkReconciler) createSecret(ctx context.Context, name string, s
 
 	return r.createResource(ctx, secret)
 
-}
-
-func (r *ClusterlinkReconciler) updateClusterlink(ctx context.Context) {
-	// TODO
 }
 
 func (r *ClusterlinkReconciler) createPVC(ctx context.Context, name string) error {

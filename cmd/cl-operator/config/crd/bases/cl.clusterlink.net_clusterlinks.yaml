@@ -34,15 +34,18 @@ spec:
           spec:
             description: ClusterlinkSpec defines the desired state of Clusterlink
             properties:
-              dataplaneReplicates:
-                type: integer
-              dataplaneType:
+              containerRegistry:
+                type: string
+              dataplane:
                 description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                   Important: Run "make" to regenerate code after modifying this file'
-                type: string
-              image:
-                type: string
-              logFile:
+                properties:
+                  replicates:
+                    type: integer
+                  type:
+                    type: string
+                type: object
+              imageTag:
                 type: string
               logLevel:
                 type: string

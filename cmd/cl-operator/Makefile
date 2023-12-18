@@ -178,11 +178,22 @@ envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
-kind-test: docker-build
+kind-test1: docker-build
 	kind delete cluster --name=peer1
 	kind create cluster --name=peer1
 	kind load docker-image cl-operator:latest --name=peer1
 	kind load docker-image cl-controlplane:latest --name=peer1
 	kind load docker-image cl-dataplane:latest --name=peer1
-	kubectl apply -f ../../k8s.yaml
+	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/cl-secret.yaml
 	$(MAKE) deploy
+	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/clusterlink.yaml
+
+kind-test2: docker-build
+	kind delete cluster --name=peer2
+	kind create cluster --name=peer2
+	kind load docker-image cl-operator:latest --name=peer2
+	kind load docker-image cl-controlplane:latest --name=peer2
+	kind load docker-image cl-dataplane:latest --name=peer2
+	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer2/cl-secret.yaml
+	$(MAKE) deploy
+	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer2/clusterlink.yaml

@@ -27,17 +27,22 @@ import (
 type ClusterlinkSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	DataplaneType       string `json:"dataplaneType,omitempty"`
-	DataplaneReplicates int    `json:"dataplaneReplicates,omitempty"`
-	LogFile             string `json:"logFile,omitempty"`
-	LogLevel            string `json:"logLevel,omitempty"`
-	Image               string `json:"image,omitempty"`
+	DataPlane         DataPlaneSpec `json:"dataplane,omitempty"`
+	LogLevel          string        `json:"logLevel,omitempty"`
+	ContainerRegistry string        `json:"containerRegistry,omitempty"`
+	ImageTag          string        `json:"imageTag,omitempty"`
 }
 
 // ClusterlinkStatus defines the observed state of Clusterlink
 type ClusterlinkStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+}
+
+// DataPlaneSpec defines the desired state of Dataplane in ClusterLink
+type DataPlaneSpec struct {
+	Type       string `json:"type,omitempty"`
+	Replicates int    `json:"replicates,omitempty"`
 }
 
 //+kubebuilder:object:root=true
