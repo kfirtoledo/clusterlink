@@ -317,19 +317,16 @@ func (r *ClusterlinkReconciler) setService(ctx context.Context, name string, por
 			Selector: map[string]string{"app": name},
 		},
 	}
-	// Set the owner reference to link the secret to the Custom Resource
-	if err := ctrl.SetControllerReference(r.clCR, service, r.Scheme); err != nil {
-		return err
-	}
+
 	// Check if the secret already exists
 	existingService := &corev1.Service{}
 	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: r.clCR.Namespace}, existingService)
 	if err != nil && errors.IsNotFound(err) {
-		// Secret doesn't exist, create it
+		// Service doesn't exist
 		if err := r.Create(ctx, service); err != nil {
 			return err
 		}
-		r.Logger.Info("service created", "Name", service.Name, "Namespace", service.Namespace)
+		r.Logger.Infof("service created, Name: %s Namespace:%s kind %s", service.Name, service.Namespace, service.Kind)
 	} else if err == nil {
 		r.Logger.Info("service already exist", "Name", existingService.Name, "Namespace", existingService.Namespace)
 	} else {
@@ -404,7 +401,7 @@ func (r *ClusterlinkReconciler) setRules(ctx context.Context, name string) error
 
 }
 func (r *ClusterlinkReconciler) setResource(ctx context.Context, object client.Object) error {
-	r.Logger.Infof("Create resource %s %s", object.GetObjectKind(), object.GetName())
+	r.Logger.Infof("Create resource %v %v", object.GetObjectKind().GroupVersionKind().Kind, object.GetName())
 	// Set the owner reference to link the secret to the Custom Resource
 	if err := ctrl.SetControllerReference(r.clCR, object, r.Scheme); err != nil {
 		r.Logger.Error(err)
