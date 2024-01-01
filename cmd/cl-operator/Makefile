@@ -201,3 +201,27 @@ kind-test2: docker-build
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer2/cl-secret.yaml
 	$(MAKE) mydeploy
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer2/clusterlink.yaml
+
+FOLDER_PATH := /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3
+CL-ADM:=  /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/cl-adm
+operator-1-keys:
+	rm -rf $(FOLDER_PATH)
+	mkdir $(FOLDER_PATH)
+	cd $(FOLDER_PATH) && $(CL-ADM) create fabric
+	cd $(FOLDER_PATH) && $(CL-ADM) create peer --name="peer1" --container-registry=""
+	cd $(FOLDER_PATH) && $(CL-ADM) create peer --name="peer2" --container-registry=""
+
+operator-2-kind: 
+	kind delete cluster --name=peer1
+	kind create cluster --name=peer1
+	kind load docker-image cl-controlplane:latest --name=peer1
+	kind load docker-image cl-dataplane:latest --name=peer1
+	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/cl-secret.yaml
+
+operator-3-operator: 
+	kind load docker-image cl-operator:latest --name=peer1
+	$(MAKE) mydeploy
+
+operator-4-yaml: 
+	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer2/clusterlink.yaml
+
