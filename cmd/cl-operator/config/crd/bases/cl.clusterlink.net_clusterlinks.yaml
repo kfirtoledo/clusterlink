@@ -35,19 +35,36 @@ spec:
             description: ClusterlinkSpec defines the desired state of Clusterlink
             properties:
               containerRegistry:
+                default: ghcr.io/clusterlink-net
                 type: string
               dataplane:
                 description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                   Important: Run "make" to regenerate code after modifying this file'
                 properties:
                   replicates:
+                    default: 1
+                    maximum: 10
+                    minimum: 1
                     type: integer
                   type:
+                    default: envoy
+                    enum:
+                    - envoy
+                    - go
                     type: string
                 type: object
               imageTag:
+                default: latest
                 type: string
               logLevel:
+                default: info
+                enum:
+                - trace
+                - info
+                - warning
+                - debug
+                - error
+                - fatal
                 type: string
             type: object
           status:

@@ -189,7 +189,7 @@ kind-test1: docker-build
 	kind load docker-image cl-controlplane:latest --name=peer1
 	kind load docker-image cl-dataplane:latest --name=peer1
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/cl-secret.yaml
-	$(MAKE) mydeploy
+	$(MAKE) deploy
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/clusterlink.yaml
 
 kind-test2: docker-build
@@ -199,7 +199,7 @@ kind-test2: docker-build
 	kind load docker-image cl-controlplane:latest --name=peer2
 	kind load docker-image cl-dataplane:latest --name=peer2
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer2/cl-secret.yaml
-	$(MAKE) mydeploy
+	$(MAKE) deploy
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer2/clusterlink.yaml
 
 FOLDER_PATH := /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3
@@ -222,6 +222,6 @@ operator-3-operator:
 	kind load docker-image cl-operator:latest --name=peer1
 	$(MAKE) mydeploy
 
-operator-4-yaml: 
+operator-4-crd: 
 	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer2/clusterlink.yaml
 
