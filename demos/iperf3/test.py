@@ -43,19 +43,18 @@ def iperf3Test(cl1:cluster, cl2:cluster, testOutputFolder,logLevel="info" ,datap
     os.chdir(projDir)
     
     # build docker environment 
-    printHeader("Build docker image")
-    os.system("make docker-build")
-    os.system("sudo make install")
+    # printHeader("Build docker image")
+    # os.system("make docker-build")
+    # os.system("sudo make install")
     
-    # Create Kind clusters environment 
-    cl1.createCluster(runBg=True)        
-    cl2.createCluster(runBg=False)  
+    # # Create Kind clusters environment 
+    # cl1.createCluster(runBg=True)        
+    # cl2.createCluster(runBg=False)  
     
-    # Start Kind clusters environment 
-    createFabric(testOutputFolder)
+    # # Start Kind clusters environment 
+    #createFabric(testOutputFolder)
     cl1.startCluster(testOutputFolder,logLevel, dataplane)        
     cl2.startCluster(testOutputFolder,logLevel, dataplane)        
-      
     # Start gwctl
     startGwctl(cl1.name, cl1.ip, cl1.port, testOutputFolder)
     startGwctl(cl2.name, cl2.ip, cl2.port, testOutputFolder)
