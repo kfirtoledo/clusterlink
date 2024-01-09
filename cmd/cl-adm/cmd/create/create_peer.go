@@ -182,7 +182,7 @@ func (o *PeerOptions) Run() error {
 	}
 
 	// create k8s deployment yaml
-	k8sConfig, err := platform.K8SConfig(&platform.Config{
+	platformCfg := &platform.Config{
 		Peer:                    o.Name,
 		FabricCertificate:       fabricCert,
 		PeerCertificate:         peerCertificate,
@@ -193,13 +193,36 @@ func (o *PeerOptions) Run() error {
 		DataplaneType:           o.DataplaneType,
 		LogLevel:                o.LogLevel,
 		ContainerRegistry:       o.ContainerRegistry,
-	})
+	}
+	k8sConfig, err := platform.K8SConfig(platformCfg)
 	if err != nil {
 		return err
 	}
 
 	outPath := filepath.Join(peerDirectory, config.K8SYamlFile)
-	return os.WriteFile(outPath, k8sConfig, 0600)
+	if err := os.WriteFile(outPath, k8sConfig, 0600); err != nil {
+		return err
+	}
+
+	// Create k8s certificates yaml.
+	certConfig, err := platform.K8SCertificateConfig(platformCfg)
+	if err != nil {
+		return err
+	}
+
+	certOutPath := filepath.Join(peerDirectory, config.K8SSecretYamlFile)
+	if err := os.WriteFile(certOutPath, certConfig, 0600); err != nil {
+		return err
+	}
+
+	// Create clusterlink yaml for operator.
+	clConfig, err := platform.K8SClusterLinkConfig(platformCfg)
+	if err != nil {
+		return err
+	}
+
+	clOutPath := filepath.Join(peerDirectory, config.K8SClusterLinkYamlFile)
+	return os.WriteFile(clOutPath, clConfig, 0600)
 }
 
 // NewCmdCreatePeer returns a cobra.Command to run the 'create peer' subcommand.

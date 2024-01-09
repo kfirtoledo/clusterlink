@@ -28,6 +28,10 @@ const (
 	GWCTLInitFile = "gwctl-init.sh"
 	// K8SYamlFile is the filename of the kubernetes deployment yaml file.
 	K8SYamlFile = "k8s.yaml"
+	// K8SSecretYamlFile is the filename of the kubernetes secrets yaml file.
+	K8SSecretYamlFile = "cl-secret.yaml"
+	// ClusterlinkYamlFile is the filename of the kubernetes ClusterLink yaml file that will use by the operator.
+	K8SClusterLinkYamlFile = "clusterlink.yaml"
 	// PersistencyDirectoryName is the directory name containing container persisted files.
 	PersistencyDirectoryName = "persist"
 
