@@ -1,0 +1,124 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+  name: operators.clusterlink.net
+spec:
+  group: clusterlink.net
+  names:
+    kind: Operator
+    listKind: OperatorList
+    plural: operators
+    singular: operator
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Operator is the Schema for the operators API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OperatorSpec defines the desired state of Operator
+            properties:
+              containerRegistry:
+                default: ghcr.io/clusterlink-net
+                type: string
+              dataplane:
+                description: DataPlaneSpec defines the desired state of the dataplane
+                  components in ClusterLink.
+                properties:
+                  replicas:
+                    default: 1
+                    maximum: 10
+                    minimum: 1
+                    type: integer
+                  type:
+                    default: envoy
+                    enum:
+                    - envoy
+                    - go
+                    type: string
+                type: object
+              imageTag:
+                default: latest
+                type: string
+              ingress:
+                description: IngressSpec defines the type of the ingress component
+                  in ClusterLink.
+                properties:
+                  type:
+                    default: none
+                    description: IngressType represents the ingress type for ClusterLink
+                      project.
+                    enum:
+                    - none
+                    - LoadBalancer
+                    - NodePort
+                    type: string
+                type: object
+              logLevel:
+                default: info
+                enum:
+                - trace
+                - info
+                - warning
+                - debug
+                - error
+                - fatal
+                type: string
+            type: object
+          status:
+            description: OperatorStatus defines the observed state of Operator
+            properties:
+              controlplane:
+                description: ComponentStatus defines the status of component in ClusterLink.
+                properties:
+                  message:
+                    type: string
+                  status:
+                    default: none
+                    description: StatusType represents the status options for ClusterLink
+                      components.
+                    enum:
+                    - none
+                    - ready
+                    - error
+                    - update
+                    type: string
+                type: object
+              dataplane:
+                description: ComponentStatus defines the status of component in ClusterLink.
+                properties:
+                  message:
+                    type: string
+                  status:
+                    default: none
+                    description: StatusType represents the status options for ClusterLink
+                      components.
+                    enum:
+                    - none
+                    - ready
+                    - error
+                    - update
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
