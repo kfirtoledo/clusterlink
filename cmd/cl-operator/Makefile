@@ -188,9 +188,9 @@ kind-test1: docker-build
 	kind load docker-image cl-operator:latest --name=peer1
 	kind load docker-image cl-controlplane:latest --name=peer1
 	kind load docker-image cl-dataplane:latest --name=peer1
-	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/cl-secret.yaml
+	kubectl apply -f ./cl-secret.yaml
 	$(MAKE) deploy
-	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/clusterlink.yaml
+	kubectl apply -f ./clusterlink.yaml
 
 kind-test2: docker-build
 	kind delete cluster --name=peer2

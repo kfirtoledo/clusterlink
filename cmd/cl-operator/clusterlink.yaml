@@ -1,0 +1,13 @@
+apiVersion: cl.clusterlink.net/v1
+kind: Clusterlink
+metadata:
+  labels:
+    app.kubernetes.io/name: instance
+    app.kubernetes.io/instance: cl-instance
+    app.kubernetes.io/part-of: clusterlink
+    app.kubernetes.io/created-by: clusterlink
+  name: cl-instance
+spec:
+  dataplane:
+    - Type: "envoy"
+      Replicates: 1  
