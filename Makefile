@@ -105,7 +105,6 @@ build:
 	$(GO) build -o ./bin/cl-adm ./cmd/cl-adm
 	$(GO) build -o bin/manager ./cmd/cl-operator/main.go
 
-
 docker-build: build
 	docker build --progress=plain --rm --tag cl-controlplane -f ./cmd/cl-controlplane/Dockerfile .
 	docker build --progress=plain --rm --tag cl-dataplane -f ./cmd/cl-dataplane/Dockerfile .
@@ -133,8 +132,16 @@ clean-tests:
 #------------------------------------------------------
 # Run Targets
 #------------------------------------------------------
-unit-tests:
+# Envtest use for checking the deployment operator
+ENVTEST ?= $(GOBIN)/setup-envtest
+ENVTEST_K8S_VERSION = 1.28.0
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(GOBIN)
+	test -s $(GOBIN)/setup-envtest || GOBIN=$(GOBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+unit-tests: envtest
 	@echo "Running unit tests..."
+	export KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(GOBIN) -p path)";\
 	$(GO) test -v -count=1 ./pkg/...  -json -cover | tparse --all
 
 tests-e2e-k8s:
