@@ -153,3 +153,29 @@ clean-kind:
 	kind delete cluster --name=peer1
 	kind delete cluster --name=peer2
 	kind delete cluster --name=peer3
+
+FOLDER_PATH := /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3
+CL-ADM:=  /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/cl-adm
+
+operator-1-keys:
+	rm -rf $(FOLDER_PATH)
+	mkdir $(FOLDER_PATH)
+	cd $(FOLDER_PATH) && $(CL-ADM) create fabric
+	cd $(FOLDER_PATH) && $(CL-ADM) create peer --name="peer1" --container-registry=""
+	cd $(FOLDER_PATH) && $(CL-ADM) create peer --name="peer2" --container-registry=""
+
+kind-test1: codegen docker-build
+	kind delete cluster --name=peer1
+	kind create cluster --name=peer1
+	kind load docker-image cl-operator:latest --name=peer1
+	kind load docker-image cl-controlplane:latest --name=peer1
+	kind load docker-image cl-dataplane:latest --name=peer1
+	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/cl-secret.yaml
+	kubectl apply --recursive -f  config/operator       
+	kubectl apply -f /home/kfirt/go/src/github.com/clusterlink-net/clusterlink/bin/tests/iperf3/peer1/cl-instance.yaml
+
+
+.PHONY: test
+test: envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(GOBIN) -p path)" go test ./pkg/operator/controller/... -coverprofile cover.out -v
+.PHONY: envtest
