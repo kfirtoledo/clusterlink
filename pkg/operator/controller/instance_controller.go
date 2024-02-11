@@ -46,7 +46,7 @@ const (
 	ControlPlaneName  = "cl-controlplane"
 	DataPlaneName     = "cl-dataplane"
 	GoDataPlaneName   = "cl-go-dataplane"
-	IngressName       = "cl-external-svc"
+	IngressName       = "cl-ingress"
 	OperatorNameSpace = "clusterlink-operator" // TODO -should be removed
 	InstanceNamespace = "clusterlink-system"
 	FinalizerName     = "instance.clusterlink.net/finalizer"
