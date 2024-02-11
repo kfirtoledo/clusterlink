@@ -247,3 +247,42 @@ func changeDataplaneDebugLevel(yaml, logLevel string) (string, error) {
           args: ["--log-level", "` + logLevel + `"`
 	return replaceOnce(yaml, search, replace)
 }
+
+func (f *Fabric) generateClusterlinkSecrets(p *peer, cfg *PeerConfig) (string, error) {
+	certConfig, err := platform.K8SCertificateConfig(&platform.Config{
+		Peer:                    p.cluster.Name(),
+		FabricCertificate:       f.cert,
+		PeerCertificate:         p.peerCert,
+		ControlplaneCertificate: p.controlplaneCert,
+		DataplaneCertificate:    p.dataplaneCert,
+		GWCTLCertificate:        p.gwctlCert,
+		Namespace:               f.namespace,
+	})
+	if err != nil {
+		return "", err
+	}
+	return string(certConfig), nil
+}
+
+// generateClusterlinkInstance generate clusterlink yaml and secrets
+func (f *Fabric) generateClusterlinkInstance(p *peer, cfg *PeerConfig) (string, error) {
+	logLevel := "info"
+	if os.Getenv("DEBUG") == "1" {
+		logLevel = "debug"
+	}
+
+	instance, err := platform.K8SClusterLinkInstanceConfig(&platform.Config{
+		Peer:              p.cluster.Name(),
+		Dataplanes:        cfg.Dataplanes,
+		DataplaneType:     cfg.DataplaneType,
+		LogLevel:          logLevel,
+		ContainerRegistry: "docker.io/library", // Tell kind to use local image.
+		Namespace:         f.namespace,
+		IngressType:       "NodePort",
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return string(instance), nil
+}

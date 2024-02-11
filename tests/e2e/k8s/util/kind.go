@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -357,6 +358,15 @@ func (c *KindCluster) DeleteNamespace(name string) error {
 func (c *KindCluster) CreateFromYAML(yaml, namespace string) error {
 	return decoder.DecodeEach(context.Background(),
 		strings.NewReader(yaml),
+		decoder.CreateHandler(c.resources),
+		decoder.MutateNamespace(namespace))
+}
+
+// CreateFromFolder creates k8s objects from a yaml in a folder.
+func (c *KindCluster) CreateFromFolder(folder, namespace string) error {
+	pattern := "*"
+	fs := os.DirFS(folder)
+	return decoder.DecodeEachFile(context.Background(), fs, pattern,
 		decoder.CreateHandler(c.resources),
 		decoder.MutateNamespace(namespace))
 }

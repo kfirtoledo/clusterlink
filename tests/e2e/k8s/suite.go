@@ -32,7 +32,7 @@ const (
 	clusterCount = 3
 )
 
-var images = [...]string{"cl-controlplane", "cl-dataplane", "cl-go-dataplane"}
+var images = [...]string{"cl-controlplane", "cl-dataplane", "cl-go-dataplane", "cl-operator"}
 
 var iperf3Service = util.Service{
 	Name:      "iperf3-server",
