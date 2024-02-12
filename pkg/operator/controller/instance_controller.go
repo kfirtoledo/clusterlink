@@ -116,14 +116,14 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Check one clusterlink per namespace
-	if name, exist := r.InstancesMeta[instance.Namespace]; exist {
+	if name, exist := r.InstancesMeta[instance.Spec.Namespace]; exist {
 		if instance.Name != name {
 			err := fmt.Errorf("instance %s in Namespace %s is  already exist- Only one instance are permit in  a Namespace",
-				name, instance.Namespace)
+				name, instance.Spec.Namespace)
 			return ctrl.Result{}, err
 		}
 	} else {
-		r.InstancesMeta[instance.Namespace] = instance.Name
+		r.InstancesMeta[instance.Spec.Namespace] = instance.Name
 	}
 	// Examine DeletionTimestamp to determine if object is under deletion
 	if !instance.DeletionTimestamp.IsZero() {
@@ -434,7 +434,7 @@ func (r *InstanceReconciler) createAccessControl(ctx context.Context, name, name
 	// Create the ClusterRole for the controlplane.
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name: name + namespace,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -457,12 +457,12 @@ func (r *InstanceReconciler) createAccessControl(ctx context.Context, name, name
 	// Create ClusterRoleBinding for the controlplane.
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name: name + namespace,
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     name,
+			Name:     name + namespace,
 		},
 		Subjects: []rbacv1.Subject{
 			{
