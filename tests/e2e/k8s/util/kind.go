@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	clusterlink "github.com/clusterlink-net/clusterlink/pkg/apis/clusterlink.net/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -142,7 +143,9 @@ func (c *KindCluster) initializeClients() error {
 	}
 
 	cfg := c.cluster.KubernetesRestConfig()
+
 	c.resources, err = resources.New(cfg)
+
 	if err != nil {
 		return fmt.Errorf("unable to initialize REST client: %w", err)
 	}
@@ -150,6 +153,10 @@ func (c *KindCluster) initializeClients() error {
 	c.clientset, err = kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("unable to initialize k8s clientset: %w", err)
+	}
+
+	if err := clusterlink.AddToScheme(c.resources.GetScheme()); err != nil {
+		return fmt.Errorf("unable to add clusterlink CRD: %w", err)
 	}
 
 	return nil
@@ -366,7 +373,7 @@ func (c *KindCluster) CreateFromYAML(yaml, namespace string) error {
 func (c *KindCluster) CreateFromFolder(folder, namespace string) error {
 	pattern := "*"
 	fs := os.DirFS(folder)
-	return decoder.DecodeEachFile(context.Background(), fs, pattern,
+	return decoder.DecodeEachFile(context.TODO(), fs, pattern,
 		decoder.CreateHandler(c.resources),
 		decoder.MutateNamespace(namespace))
 }

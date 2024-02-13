@@ -24,6 +24,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/clusterlink-net/clusterlink/pkg/bootstrap"
 	"github.com/clusterlink-net/clusterlink/pkg/bootstrap/platform"
@@ -160,11 +161,6 @@ func (f *Fabric) deployClusterLink(target *peer, cfg *PeerConfig) (*ClusterLink,
 		return nil, fmt.Errorf("namespace not set")
 	}
 
-	k8sYAML, err := f.generateK8SYAML(target, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("cannot generate k8s yaml: %w", err)
-	}
-
 	svcNodePort := "cl-dataplane"
 	if cfg.DeployWithOperator {
 		err := f.createOperator(target)
@@ -182,21 +178,30 @@ func (f *Fabric) deployClusterLink(target *peer, cfg *PeerConfig) (*ClusterLink,
 		}
 
 		// Create ClusterLink instance
-		k8sYAML, err = f.generateClusterlinkInstance(target, cfg)
+		instance, err := f.generateClusterlinkInstance(target, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("cannot generate ClusterLink instance: %w", err)
 		}
 
+		if err := target.cluster.CreateFromYAML(instance, controller.OperatorNameSpace); err != nil {
+			return nil, fmt.Errorf("cannot create k8s objects: %w", err)
+		}
 		svcNodePort = "cl-ingress"
-	}
 
-	if err := target.cluster.CreateFromYAML(k8sYAML, f.namespace); err != nil {
-		return nil, fmt.Errorf("cannot create k8s objects: %w", err)
+	} else {
+		k8sYAML, err := f.generateK8SYAML(target, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("cannot generate k8s yaml: %w", err)
+		}
+
+		if err := target.cluster.CreateFromYAML(k8sYAML, f.namespace); err != nil {
+			return nil, fmt.Errorf("cannot create k8s objects: %w", err)
+		}
 	}
 
 	// Wait for dataplane will be ready.
 	dep := appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cl-dataplane", Namespace: f.namespace}}
-	err = wait.For(conditions.New(target.cluster.resources).DeploymentConditionMatch(&dep, appsv1.DeploymentAvailable, v1.ConditionTrue), wait.WithTimeout(time.Second*60))
+	err := wait.For(conditions.New(target.cluster.resources).DeploymentConditionMatch(&dep, appsv1.DeploymentAvailable, v1.ConditionTrue), wait.WithTimeout(time.Second*60))
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +253,6 @@ func (f *Fabric) deployClusterLink(target *peer, cfg *PeerConfig) (*ClusterLink,
 	if err := clink.WaitForControlplaneAPI(); err != nil {
 		return nil, fmt.Errorf("error waiting for controlplane API server: %w", err)
 	}
-
 	return clink, nil
 }
 
@@ -311,6 +315,19 @@ func (f *Fabric) DeployClusterlinks(peerCount uint8, cfg *PeerConfig) ([]*Cluste
 	}
 
 	return clusterlinks, nil
+}
+
+func (f *Fabric) GetResource(num int, name, namespace string, object runtimeClient.Object) error {
+	return f.peers[num].cluster.resources.Get(context.Background(), name, namespace, object)
+
+}
+func (f *Fabric) CreateResource(num int, object runtimeClient.Object) error {
+	f.peers[num].cluster.resources.Create(context.Background(), object)
+	return nil
+}
+
+func (f *Fabric) GetNamespace() string {
+	return f.namespace
 }
 
 // NewFabric returns a new empty fabric.

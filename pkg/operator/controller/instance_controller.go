@@ -118,8 +118,9 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Check one clusterlink per namespace
 	if name, exist := r.InstancesMeta[instance.Spec.Namespace]; exist {
 		if instance.Name != name {
-			err := fmt.Errorf("instance %s in Namespace %s is  already exist- Only one instance are permit in  a Namespace",
-				name, instance.Spec.Namespace)
+			err := fmt.Errorf("Can't create instance %s in namespace %s, instance %s  is already exist - Only one instance are permit in a Namespace",
+				instance.Name, instance.Spec.Namespace, name)
+			r.updateFailureStatuse(ctx, instance)
 			return ctrl.Result{}, err
 		}
 	} else {
@@ -134,6 +135,8 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if err := r.deleteFinalizer(ctx, instance); err != nil {
 			return ctrl.Result{}, err
 		}
+
+		delete(r.InstancesMeta, instance.Spec.Namespace)
 		return ctrl.Result{}, nil
 	}
 
@@ -801,6 +804,25 @@ func (r *InstanceReconciler) checkServiceStatus(ctx context.Context, name types.
 	status.Reason = StatusModeReady
 	status.Message = "Service is ready"
 	return s, status, nil
+}
+
+// updateFailureStatuse updates the component status conditions.
+func (r *InstanceReconciler) updateFailureStatuse(ctx context.Context, instance *clusterlink.Instance) {
+	cond := []metav1.Condition{{Type: string(clusterlink.DeploymentReady), Status: metav1.ConditionFalse, Reason: StatusModeNotExist}}
+	if instance.Status.Controlplane.Conditions == nil {
+		instance.Status.Controlplane.Conditions = make(map[string]metav1.Condition)
+	}
+
+	if instance.Status.Dataplane.Conditions == nil {
+		instance.Status.Dataplane.Conditions = make(map[string]metav1.Condition)
+	}
+
+	cpUpdate := r.updateCondition(instance.Status.Controlplane.Conditions, cond)
+	dpUpdate := r.updateCondition(instance.Status.Dataplane.Conditions, cond)
+
+	if cpUpdate || dpUpdate {
+		r.Status().Update(ctx, instance)
+	}
 }
 
 // updateCondition updates the component status conditions.

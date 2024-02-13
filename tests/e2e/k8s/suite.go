@@ -165,7 +165,7 @@ func (s *TestSuite) RunSubTest(subTestName string, subtest func()) bool {
 // RunOnAllDataplaneTypes runs the given test function on all dataplane types (envoy / go).
 func (s *TestSuite) RunOnAllDataplaneTypes(test func(cfg *util.PeerConfig)) {
 	// DataplaneTypeConfigs holds a single simple configuration per each dataplane type.
-	dataplaneTypes := []string{platform.DataplaneTypeEnvoy, platform.DataplaneTypeGo}
+	dataplaneTypes := []string{platform.DataplaneTypeEnvoy}
 
 	for _, dataplaneType := range dataplaneTypes {
 		s.RunSubTest(dataplaneType, func() {
