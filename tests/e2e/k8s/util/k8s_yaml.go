@@ -271,7 +271,7 @@ func (f *Fabric) generateClusterlinkInstance(p *peer, cfg *PeerConfig) (string, 
 	if os.Getenv("DEBUG") == "1" {
 		logLevel = "debug"
 	}
-
+	name := "cl-instance" + f.namespace
 	instance, err := platform.K8SClusterLinkInstanceConfig(&platform.Config{
 		Peer:              p.cluster.Name(),
 		Dataplanes:        cfg.Dataplanes,
@@ -280,7 +280,7 @@ func (f *Fabric) generateClusterlinkInstance(p *peer, cfg *PeerConfig) (string, 
 		ContainerRegistry: "docker.io/library", // Tell kind to use local image.
 		Namespace:         f.namespace,
 		IngressType:       "NodePort",
-	})
+	}, name)
 	if err != nil {
 		return "", err
 	}
