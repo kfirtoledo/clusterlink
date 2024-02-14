@@ -17,11 +17,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
 
+	clusterlink "github.com/clusterlink-net/clusterlink/pkg/apis/clusterlink.net/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -141,6 +143,7 @@ func (c *KindCluster) initializeClients() error {
 	}
 
 	cfg := c.cluster.KubernetesRestConfig()
+
 	c.resources, err = resources.New(cfg)
 	if err != nil {
 		return fmt.Errorf("unable to initialize REST client: %w", err)
@@ -149,6 +152,11 @@ func (c *KindCluster) initializeClients() error {
 	c.clientset, err = kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("unable to initialize k8s clientset: %w", err)
+	}
+
+	// Add instance CRD to scheme.
+	if err := clusterlink.AddToScheme(c.resources.GetScheme()); err != nil {
+		return fmt.Errorf("unable to add clusterlink CRD: %w", err)
 	}
 
 	return nil
@@ -361,6 +369,14 @@ func (c *KindCluster) CreateFromYAML(yaml, namespace string) error {
 		decoder.MutateNamespace(namespace))
 }
 
+// CreateFromFolder creates k8s objects from a yaml in a folder.
+func (c *KindCluster) CreateFromFolder(folder string) error {
+	pattern := "*"
+	fs := os.DirFS(folder)
+	return decoder.DecodeEachFile(context.TODO(), fs, pattern,
+		decoder.CreateHandler(c.resources))
+}
+
 // ExposeNodeport returns a nodeport (uint16) for accessing a given k8s service.
 // The returned nodeport service is cached across subsequent calls.
 func (c *KindCluster) ExposeNodeport(service *Service) (uint16, error) {
@@ -468,6 +484,19 @@ func (c *KindCluster) ScaleDeployment(name, namespace string, replicas int32) er
 	}
 
 	return fmt.Errorf("timeout while waiting for deployment scale to update")
+}
+
+// CreateOperator create operator from folder config.
+func (c *KindCluster) CreateOperator() error {
+	if err := c.CreateFromFolder("./../../../config/operator/manager/"); err != nil {
+		return err
+	}
+	return c.CreateFromFolder("./../../../config/operator/rbac/")
+}
+
+// CreateCRDs creates the CRDs from folder config.
+func (c *KindCluster) CreateCRDs() error {
+	return c.CreateFromFolder("./../../../config/operator/crds/")
 }
 
 // NewKindCluster returns a new yet to be running kind cluster.
