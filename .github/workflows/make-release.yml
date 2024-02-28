@@ -1,4 +1,4 @@
-name:  Image release
+name: Release Images and Binaries
 
 on:
   push:
@@ -6,8 +6,7 @@ on:
       - 'v**'
 
 jobs:
-  build_and_push_to_ghcr:
-    name: Create docker release and publish to ghcr
+  release:
     runs-on: ubuntu-latest
     steps:
     - name: checkout
@@ -22,5 +21,32 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Build and push ClusterLink images
-      run: make push-image IMAGE_VERSION=${{ github.ref_name }}
+    - name: Build images
+      run: make docker-build
+    - name: Build and compress linux binaries
+      run: |
+        GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ./linux/gwctl ./cmd/gwctl
+        GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ./linux/cl-adm ./cmd/cl-adm
+        tar -czvf clusterlink-linux-amd64.tar.gz --transform 's/linux/clusterlink/' ./linux
+    - name: Build and compress macOS binaries
+      run: |
+        GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o ./os/gwctl ./cmd/gwctl
+        GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o ./os/cl-adm ./cmd/cl-adm
+        tar -czvf clusterlink-darwin-amd64.tar.gz --transform 's/os/clusterlink/' ./os
+    - name: Build and compress Arm-based macOS binaries
+      run: |
+        GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o ./osarm64/gwctl ./cmd/gwctl
+        GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o ./osarm64/cl-adm ./cmd/cl-adm
+        tar -czvf clusterlink-darwin-arm64.tar.gz --transform 's/osarm64/clusterlink/' ./osarm64
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ./clusterlink*
+        tag: ${{ github.ref }}
+        overwrite: true
+        file_glob: true
+    # - name: Tag and push ClusterLink images with tag 'latest'
+    #   run: make push-image
+    # - name: Tag and push ClusterLink images latest with tag ${{ github.ref_name }}
+    #   run: make push-image IMAGE_VERSION=${{ github.ref_name }}
