@@ -125,6 +125,8 @@ push-image: docker-build
 	docker push $(IMAGE_BASE)/cl-go-dataplane:$(IMAGE_VERSION)
 	docker tag gwctl:latest $(IMAGE_BASE)/gwctl:$(IMAGE_VERSION)
 	docker push $(IMAGE_BASE)/gwctl:$(IMAGE_VERSION)
+	docker tag cl-operator:latest $(IMAGE_BASE)/cl-operator:$(IMAGE_VERSION)
+	docker push $(IMAGE_BASE)/cl-operator:$(IMAGE_VERSION)
 
 install:
 	cp ./bin/gwctl /usr/local/bin/
