@@ -66,8 +66,8 @@ def iperf3Test(cl1:cluster, cl2:cluster, testOutputFolder,logLevel="info" ,datap
     
     # Create peers
     printHeader("Create peers")
-    runcmd(f'gwctl create peer --myid {cl1.name} --name {cl2.name} --host {cl2.ip} --port {cl1.port}')
-    runcmd(f'gwctl create peer --myid {cl2.name} --name {cl1.name} --host {cl1.ip} --port {cl2.port}')
+    runcmd(f'gwctl create peer --myid {cl1.name} --name {cl2.name} --host {cl2.ip} --port {cl2.port}')
+    runcmd(f'gwctl create peer --myid {cl2.name} --name {cl1.name} --host {cl1.ip} --port {cl1.port}')
     
     # Create exports
     runcmd(f'gwctl create export --myid {cl1.name} --name {srcSvc} --host {srcSvc} --port {destPort}')

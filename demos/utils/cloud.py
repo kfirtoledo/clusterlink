@@ -144,14 +144,14 @@ class cluster:
             
     # createLoadBalancer creates load-balancer to external access. 
     def createLoadBalancer(self,port="443", externalIp=""):
-        runcmd(f"kubectl expose deployment cl-dataplane --name=cl-dataplane-load-balancer --port={port} --target-port={port} --type=LoadBalancer")
+        #runcmd(f"kubectl expose deployment cl-dataplane --name=cl-dataplane-load-balancer --port={port} --target-port={port} --type=LoadBalancer")
         gwIp=""
         if externalIp !="":
-            runcmd("kubectl patch svc cl-dataplane-load-balancer -p "+ "\'{\"spec\": {\"type\": \"LoadBalancer\", \"loadBalancerIP\": \""+ externalIp+ "\"}}\'")
+            runcmd("kubectl patch svc clusterlink -p "+ "\'{\"spec\": {\"type\": \"LoadBalancer\", \"loadBalancerIP\": \""+ externalIp+ "\"}}\'")
             gwIp= externalIp
         while gwIp =="":
-            print("Waiting for cl-dataplane ip...")
-            gwIp=sp.getoutput('kubectl get svc -l app=cl-dataplane  -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}"')
+            print("Waiting for clusterlink ip...")
+            gwIp=sp.getoutput('kubectl get svc clusterlink -o jsonpath="{.status.loadBalancer.ingress[0].ip}"')
             time.sleep(10)
         self.ip = gwIp
         return gwIp

@@ -19,7 +19,7 @@ from colorama import Style
 from demos.utils.k8s import waitPod
 
 ProjDir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-clAdm    = ProjDir + "/bin/cl-adm "
+clAdm    = "cl-adm"
 folMfst=f"{ProjDir}/config/manifests"
 
 # Init Functions
@@ -29,9 +29,9 @@ def createFabric(dir):
     runcmdDir(f"{clAdm} create fabric",dir)
 
 # createGw creates peer certificates and yaml and deploys it to the cluster. 
-def createGw(name, dir, logLevel="info",dataplane="envoy",localImage=False):
-    createPeer(name, dir, logLevel, dataplane,localImage)
-    applyPeer(name, dir)
+def createGw(name, dir, logLevel="info",dataplane="envoy",localImage=False,port=30443):
+    createPeer(name, dir, logLevel, dataplane, localImage)
+    applyPeer(name, dir,port, localImage)
 
 # createPeer creates peer certificates and yaml
 def createPeer(name, dir, logLevel="info", dataplane="envoy",localImage=False):
@@ -39,11 +39,14 @@ def createPeer(name, dir, logLevel="info", dataplane="envoy",localImage=False):
     runcmdDir(f"{clAdm} create peer --name {name} --log-level {logLevel} --dataplane-type {dataplane} {flag} --namespace default",dir)
     
 # applyPeer deploys the peer certificates and yaml to the cluster. 
-def applyPeer(name,dir):
-    runcmd(f"kubectl apply -f {dir}/{name}/k8s.yaml")
+def applyPeer(name,dir,port=443, localImage=False):
+    flag = f"--container-registry=docker.io/library  --ingress NodePort  --ingress-port {port}" if localImage else ""
+    # runcmd(f"kubectl apply -f {dir}/{name}/k8s.yaml")
+    runcmdDir(f"cl-adm deploy peer --name {name} --autostart --namespace default {flag}",dir)
+   # runcmd(f"kubectl apply -f {dir}/{name}/k8s.yaml")
     waitPod("cl-controlplane")
     waitPod("cl-dataplane")
-    waitPod("gwctl")
+    # waitPod("gwctl")
     
 # startGwctl sets gwctl configuration
 def startGwctl(name,geIP, gwPort, testOutputFolder):

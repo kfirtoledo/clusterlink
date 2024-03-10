@@ -59,6 +59,10 @@ def getNodeIP(num=0):
     ip = clJson["items"][0]["status"]["addresses"][num]["address"]
     return ip
 
+def getNodePort(name,namespace="default"):
+    service_info = json.loads(sp.getoutput(f'kubectl get service {name} -n {namespace} -o json'))
+    return  service_info["spec"]["ports"][0]["nodePort"]
+
 # cleanCluster removes all deployments and services 
 def cleanCluster():
     sp.getoutput('kubectl delete --all deployments')

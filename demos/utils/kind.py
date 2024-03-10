@@ -14,7 +14,7 @@
 import os
 from demos.utils.manifests.kind.flannel.create_cni_bridge import createCniBridge,createKindCfgForflunnel
 from demos.utils.common import runcmd, createGw, printHeader, ProjDir
-from demos.utils.k8s import waitPod, getNodeIP
+from demos.utils.k8s import waitPod, getNodeIP,getNodePort
 
 # cluster class represents a kind cluster for deploying the ClusterLink gateway. 
 class cluster:
@@ -51,11 +51,13 @@ class cluster:
         runcmd(f"kind load docker-image cl-controlplane --name={self.name}")
         runcmd(f"kind load docker-image cl-dataplane    --name={self.name}")
         runcmd(f"kind load docker-image cl-go-dataplane --name={self.name}")
+        runcmd(f"kind load docker-image cl-operator     --name={self.name}")
         runcmd(f"kind load docker-image gwctl --name={self.name}")
-        createGw(self.name, testOutputFolder, logLevel, dataplane, localImage=True)
+        createGw(self.name, testOutputFolder, logLevel, dataplane,port=self.port, localImage=True)
         self.setKindIp()
-        runcmd("kubectl delete service cl-dataplane")
-        runcmd("kubectl create service nodeport cl-dataplane --tcp=443:443 --node-port=30443")
+        self.port= getNodePort("clusterlink")
+        # runcmd("kubectl delete service cl-dataplane")
+        # runcmd("kubectl create service nodeport cl-dataplane --tcp=443:443 --node-port=30443")
 
     # useCluster sets the context for the input kind cluster.
     def useCluster(self):
