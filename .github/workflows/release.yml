@@ -24,9 +24,12 @@ jobs:
     - name: Build images
       run: make docker-build
     - name: Tag and push ClusterLink images with tag 'latest'
-      run: make push-image
-    - name: Tag and push ClusterLink images latest with tag ${{ github.ref_name }}
-      run: make push-image IMAGE_VERSION=${{ github.ref_name }}
+      run: |
+        docker tag gwctl:latest  ghcr.io/kfirtoledo/gwctl:latest
+        docker push ghcr.io/kfirtoledo/gwctl:latest
+    #   run: make push-image
+    # - name: Tag and push ClusterLink images latest with tag ${{ github.ref_name }}
+    #   run: make push-image IMAGE_VERSION=${{ github.ref_name }}
     - name: Build and compress binaries
       run: |
         for pair in "linux:amd64" "darwin:amd64" "darwin:arm64"; do

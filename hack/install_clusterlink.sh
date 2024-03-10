@@ -26,12 +26,12 @@ case "${OS_ARCH}" in
 esac
 
 filename="clusterlink-${CL_OS}-${CL_ARCH}.tar.gz"
-url="https://github.com/clusterlink-net/clusterlink/releases/download/${VERSION}/${filename}"
+url="https://github.com/kfirtoledo/clusterlink/releases/download/${VERSION}/${filename}"
 
-# Set version to latest if not define and update the url.
+# Set version to latest if not define and update url.
 if [ "${VERSION}" = "" ] ; then
   VERSION="latest"
-  url="https://github.com/clusterlink-net/clusterlink/releases/${VERSION}/download/${filename}"
+  url="https://github.com/kfirtoledo/clusterlink/releases/${VERSION}/download/${filename}"
 fi
 
 printf "\n Downloading %s from %s ...\n" "$filename" "$url"
