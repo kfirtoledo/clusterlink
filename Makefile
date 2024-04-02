@@ -169,9 +169,9 @@ run-kind-iperf3:
 run-kind-bookinfo:
 	python3 demos/bookinfo/kind/test.py
 
-#-----------------------------------------------------
+#-----------------------------------------------------d
 # Clean targets
-#-----------------------------------------------------
+#-----------------------------------------------------d
 clean-kind:
 	kind delete cluster --name=peer1
 	kind delete cluster --name=peer2
