@@ -1,8 +1,8 @@
 #!/bin/sh
 # This script installs the latest ClusterLink CLI using the command:
 # curl -L https://github.com/clusterlink-net/clusterlink/releases/latest/download/clusterlink.sh | sh -
-# To fetch a specific version, add the VERSION variable to the script:
-# curl -L https://github.com/clusterlink-net/clusterlink/releases/latest/download/clusterlink.sh | VERSION=v0.2.1 sh -
+# To fetch a specific version, use the URL path of the version release:
+# curl -L https://github.com/clusterlink-net/clusterlink/releases/v0.2.1/download/clusterlink.sh | sh -
 
 set -e
 
@@ -34,10 +34,9 @@ filename="clusterlink-${CL_OS}-${CL_ARCH}.tar.gz"
 url="https://github.com/clusterlink-net/clusterlink/releases/download/${VERSION}/${filename}"
 
 # Set version to latest if not define and update the url.
-if [ "${VERSION}" = "" ] ; then
-  VERSION="latest"
-  url="https://github.com/clusterlink-net/clusterlink/releases/${VERSION}/download/${filename}"
-fi
+VERSION="latest"
+url="https://github.com/clusterlink-net/clusterlink/releases/${VERSION}/download/${filename}"
+
 
 printf "\n Downloading %s from %s ...\n" "$filename" "$url"
 
